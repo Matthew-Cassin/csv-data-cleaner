@@ -1,0 +1,11 @@
+name,email,phone,age,address,created_date
+John Smith,  john@example.com  ,(555) 123-4567,28,123 Main St,2023-01-15
+john smith,john@example.com,555-123-4567,28,123 main st,01/15/2023
+Jane Doe,jane@example.com,555-987-6543,35,456 Oak Ave,2023-02-20
+J. Doe,jane.doe@example.com,555-987-6543,35,456 Oak Avenue,02/20/2023
+,incomplete@example.com,,not-a-number,789 Pine Rd,2023-03-10
+Bob Johnson,bob@example.com!!!,(555) 456-7890,42,123 Main St,2023-01-15
+Bob Johnson,bob@example.com!!!,(555) 456-7890,42,123 Main St,2023-01-15
+Alice Brown,ALICE@EXAMPLE.COM,555.111.2222,29,321 Elm St,2023/04/05
+Charlie Green,charlie@,invalid-phone,150,654 Maple Dr,not-a-date
+Diana White,diana@example.com,555-333-4444,31,,2023-05-12
