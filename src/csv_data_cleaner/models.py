@@ -10,19 +10,20 @@ of that run, suitable for writing straight to JSON.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
+from dataclasses import field as dc_field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 
 __all__ = [
-    "CleaningRule",
-    "DataQualityIssue",
+    "CleaningError",
     "CleaningReport",
     "CleaningResult",
+    "CleaningRule",
+    "DataQualityIssue",
     "DataQualityReport",
-    "CleaningError",
 ]
 
 
@@ -53,7 +54,7 @@ class CleaningRule:
 
     field: str
     rule_type: str
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    parameters: dict[str, Any] = dc_field(default_factory=dict)
 
 
 @dataclass
@@ -78,7 +79,7 @@ class DataQualityIssue:
     field: str
     issue_type: str
     original_value: str
-    cleaned_value: Optional[str]
+    cleaned_value: str | None
     severity: str
     message: str
 
@@ -106,9 +107,9 @@ class CleaningReport:
     total_rows: int
     processed_rows: int
     rows_with_issues: int
-    issues: List[DataQualityIssue] = field(default_factory=list)
-    columns_processed: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    suggestions: List[str] = field(default_factory=list)
+    issues: list[DataQualityIssue] = dc_field(default_factory=list)
+    columns_processed: dict[str, dict[str, Any]] = dc_field(default_factory=dict)
+    suggestions: list[str] = dc_field(default_factory=list)
 
 
 @dataclass
@@ -130,8 +131,8 @@ class CleaningResult:
 
     cleaned_data: pd.DataFrame
     report: CleaningReport
-    removed_rows: List[int] = field(default_factory=list)
-    summary: Dict[str, Any] = field(default_factory=dict)
+    removed_rows: list[int] = dc_field(default_factory=list)
+    summary: dict[str, Any] = dc_field(default_factory=dict)
 
 
 @dataclass
@@ -169,12 +170,12 @@ class DataQualityReport:
     rows_removed: int
     quality_score_before: float
     quality_score_after: float
-    issues: List[DataQualityIssue] = field(default_factory=list)
-    columns_processed: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    suggestions: List[str] = field(default_factory=list)
+    issues: list[DataQualityIssue] = dc_field(default_factory=list)
+    columns_processed: dict[str, dict[str, Any]] = dc_field(default_factory=dict)
+    suggestions: list[str] = dc_field(default_factory=list)
 
     @classmethod
-    def from_result(cls, result: CleaningResult) -> "DataQualityReport":
+    def from_result(cls, result: CleaningResult) -> DataQualityReport:
         """Build a :class:`DataQualityReport` from a :class:`CleaningResult`.
 
         Args:
@@ -199,7 +200,7 @@ class DataQualityReport:
             suggestions=report.suggestions,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable ``dict`` representation.
 
         Returns:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import html as html_module
-from typing import Any, Dict, List
+from typing import Any
 
 from tabulate import tabulate
 
@@ -24,7 +24,7 @@ class QualityReporter:
     self-contained HTML file, for sharing with a non-technical reviewer).
     """
 
-    def generate_report(self, result: CleaningResult) -> Dict[str, Any]:
+    def generate_report(self, result: CleaningResult) -> dict[str, Any]:
         """Build the full quality report as a plain dict.
 
         Args:
@@ -53,7 +53,7 @@ class QualityReporter:
             issues found.
         """
         summary = result.summary
-        rows = [
+        rows: list[list[object]] = [
             ["Total records", result.report.total_rows],
             ["Rows cleaned (kept)", result.report.processed_rows],
             ["Rows removed", len(result.removed_rows)],
@@ -89,15 +89,15 @@ def _esc(value: Any) -> str:
     return html_module.escape(str(value))
 
 
-def _severity_counts(issues: List[DataQualityIssue]) -> Dict[str, int]:
-    counts: Dict[str, int] = {}
+def _severity_counts(issues: list[DataQualityIssue]) -> dict[str, int]:
+    counts: dict[str, int] = {}
     for issue in issues:
         counts[issue.severity] = counts.get(issue.severity, 0) + 1
     return counts
 
 
-def _issue_type_counts(issues: List[DataQualityIssue]) -> Dict[str, int]:
-    counts: Dict[str, int] = {}
+def _issue_type_counts(issues: list[DataQualityIssue]) -> dict[str, int]:
+    counts: dict[str, int] = {}
     for issue in issues:
         counts[issue.issue_type] = counts.get(issue.issue_type, 0) + 1
     return counts

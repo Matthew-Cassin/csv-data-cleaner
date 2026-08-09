@@ -10,7 +10,6 @@ quality scores and to auto-detect numeric columns for outlier checks).
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional
 
 import chardet
 import pandas as pd
@@ -81,7 +80,7 @@ class DataAnalyzer:
         )
         return encoding
 
-    def analyze_data_types(self, df: pd.DataFrame) -> Dict[str, str]:
+    def analyze_data_types(self, df: pd.DataFrame) -> dict[str, str]:
         """Infer a likely data type for each column.
 
         A lightweight, dependency-free heuristic (no email/phone
@@ -102,7 +101,7 @@ class DataAnalyzer:
         """
         return {column: self._infer_column_type(df[column]) for column in df.columns}
 
-    def _infer_column_type(self, column: "pd.Series") -> str:
+    def _infer_column_type(self, column: pd.Series) -> str:
         """Infer the type of a single column. See :meth:`analyze_data_types`."""
         values = column.dropna().astype(str).str.strip()
         values = values[values != ""]
@@ -135,7 +134,7 @@ class DataAnalyzer:
 
         return "text"
 
-    def detect_missing_values(self, df: pd.DataFrame) -> Dict[str, float]:
+    def detect_missing_values(self, df: pd.DataFrame) -> dict[str, float]:
         """Calculate the fraction of missing values in each column.
 
         Args:
@@ -147,12 +146,12 @@ class DataAnalyzer:
             DataFrame.
         """
         if len(df) == 0:
-            return {column: 0.0 for column in df.columns}
-        return df.isna().mean().to_dict()
+            return dict.fromkeys((str(column) for column in df.columns), 0.0)
+        return {str(column): float(fraction) for column, fraction in df.isna().mean().items()}
 
     def detect_duplicates(
-        self, df: pd.DataFrame, subset: Optional[List[str]] = None
-    ) -> List[int]:
+        self, df: pd.DataFrame, subset: list[str] | None = None
+    ) -> list[int]:
         """Find rows that duplicate an earlier row.
 
         Args:
@@ -170,8 +169,8 @@ class DataAnalyzer:
         return df.index[mask].tolist()
 
     def detect_outliers(
-        self, df: pd.DataFrame, numeric_columns: Optional[List[str]] = None
-    ) -> Dict[str, List[int]]:
+        self, df: pd.DataFrame, numeric_columns: list[str] | None = None
+    ) -> dict[str, list[int]]:
         """Find numeric outliers using the IQR method.
 
         A value is an outlier if it falls outside
@@ -193,7 +192,7 @@ class DataAnalyzer:
             types = self.analyze_data_types(df)
             numeric_columns = [column for column, kind in types.items() if kind == "numeric"]
 
-        result: Dict[str, List[int]] = {}
+        result: dict[str, list[int]] = {}
         for column in numeric_columns:
             if column not in df.columns:
                 continue
@@ -267,7 +266,7 @@ class DataAnalyzer:
         column looks like an email or phone column.
         """
         types = self.analyze_data_types(df)
-        rates: List[float] = []
+        rates: list[float] = []
         for column, kind in types.items():
             if kind not in ("email", "phone"):
                 continue

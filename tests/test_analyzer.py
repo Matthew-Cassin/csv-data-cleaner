@@ -160,7 +160,7 @@ class TestGenerateQualityScore:
     def test_score_is_a_native_python_float(self, analyzer):
         df = pd.DataFrame({"a": ["1", None, "3"]})
         score = analyzer.generate_quality_score(df)
-        assert type(score) is float  # noqa: E721 - explicitly not numpy.float64
+        assert type(score) is float
 
     def test_worse_data_scores_lower_than_better_data(self, analyzer):
         clean_df = pd.DataFrame({"a": ["1", "2", "3"]})
