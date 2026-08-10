@@ -6,7 +6,7 @@ import csv as csv_module
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, cast
 
 import pandas as pd
 
@@ -20,7 +20,7 @@ from .models import (
     DataQualityIssue,
     DataQualityReport,
 )
-from .validators import FieldValidator
+from .validators import FieldValidator, _EmailValidatorLike, _PhoneValidatorLike
 
 logger = get_logger("cleaner")
 
@@ -74,8 +74,8 @@ class CSVCleaner:
 
     def __init__(
         self,
-        email_validator=None,
-        phone_validator=None,
+        email_validator: _EmailValidatorLike | None = None,
+        phone_validator: _PhoneValidatorLike | None = None,
         remove_empty_rows: bool = True,
     ) -> None:
         self.email_validator = email_validator
@@ -89,11 +89,11 @@ class CSVCleaner:
         # Scoped to "the most recent clean() call on this instance" --
         # call clean() and save_results() as a pair on the same
         # CSVCleaner, as the CLI does.
-        self._last_original_data: Optional[pd.DataFrame] = None
+        self._last_original_data: pd.DataFrame | None = None
 
     # -- Loading ------------------------------------------------------
 
-    def load_csv(self, filepath: str, encoding: Optional[str] = None) -> pd.DataFrame:
+    def load_csv(self, filepath: str, encoding: str | None = None) -> pd.DataFrame:
         """Load a CSV file into a DataFrame.
 
         Args:
@@ -149,7 +149,7 @@ class CSVCleaner:
     def _detect_delimiter(self, filepath: str, encoding: str) -> str:
         """Sniff the delimiter from a sample of the file; default to comma."""
         try:
-            with open(filepath, "r", encoding=encoding, errors="replace") as handle:
+            with open(filepath, encoding=encoding, errors="replace") as handle:
                 sample = handle.read(8192)
             dialect = csv_module.Sniffer().sniff(sample, delimiters=",;\t|")
             return dialect.delimiter
@@ -158,7 +158,7 @@ class CSVCleaner:
 
     # -- Column-level cleaning operations ------------------------------
 
-    def _resolve_columns(self, df: pd.DataFrame, columns: Optional[List[str]]) -> List[str]:
+    def _resolve_columns(self, df: pd.DataFrame, columns: list[str] | None) -> list[str]:
         """All columns if none given, else validate they all exist."""
         if columns is None:
             return list(df.columns)
@@ -168,7 +168,7 @@ class CSVCleaner:
         return columns
 
     def trim_whitespace(
-        self, df: pd.DataFrame, columns: Optional[List[str]] = None
+        self, df: pd.DataFrame, columns: list[str] | None = None
     ) -> pd.DataFrame:
         """Strip leading/trailing whitespace from string columns.
 
@@ -192,7 +192,7 @@ class CSVCleaner:
         return result
 
     def standardize_case(
-        self, df: pd.DataFrame, columns: Optional[List[str]] = None, case: str = "lower"
+        self, df: pd.DataFrame, columns: list[str] | None = None, case: str = "lower"
     ) -> pd.DataFrame:
         """Convert string columns to a consistent case.
 
@@ -223,7 +223,7 @@ class CSVCleaner:
         return result
 
     def remove_special_characters(
-        self, df: pd.DataFrame, columns: Optional[List[str]] = None, keep_chars: str = ""
+        self, df: pd.DataFrame, columns: list[str] | None = None, keep_chars: str = ""
     ) -> pd.DataFrame:
         """Strip non-alphanumeric characters from string columns.
 
@@ -256,7 +256,7 @@ class CSVCleaner:
         return result
 
     def handle_missing_values(
-        self, df: pd.DataFrame, strategy: str = "drop", fill_value: Optional[str] = None
+        self, df: pd.DataFrame, strategy: str = "drop", fill_value: str | None = None
     ) -> pd.DataFrame:
         """Handle missing (``NaN``) values across the whole DataFrame.
 
@@ -298,8 +298,8 @@ class CSVCleaner:
         return result
 
     def remove_duplicates(
-        self, df: pd.DataFrame, subset: Optional[List[str]] = None, keep: Any = "first"
-    ) -> Tuple[pd.DataFrame, List[int]]:
+        self, df: pd.DataFrame, subset: list[str] | None = None, keep: Any = "first"
+    ) -> tuple[pd.DataFrame, list[int]]:
         """Remove exact duplicate rows.
 
         Args:
@@ -328,7 +328,7 @@ class CSVCleaner:
 
     def validate_column(
         self, df: pd.DataFrame, column: str, validation_type: str, validator: Any = None
-    ) -> Tuple[pd.DataFrame, List[DataQualityIssue]]:
+    ) -> tuple[pd.DataFrame, list[DataQualityIssue]]:
         """Validate (and where meaningful, normalize) a single column.
 
         Missing (``NaN``) values are skipped -- that's
@@ -378,7 +378,7 @@ class CSVCleaner:
 
         method = getattr(field_validator, _VALIDATION_METHODS[validation_type])
         result = df.copy()
-        issues: List[DataQualityIssue] = []
+        issues: list[DataQualityIssue] = []
 
         for idx, raw_value in df[column].items():
             if pd.isna(raw_value):
@@ -393,7 +393,11 @@ class CSVCleaner:
             else:
                 issues.append(
                     DataQualityIssue(
-                        row_index=int(idx),
+                        # df/series here are always freshly loaded via
+                        # load_csv (a plain RangeIndex), so idx is an int
+                        # at runtime even though pandas-stubs types it as
+                        # Hashable.
+                        row_index=cast(int, idx),
                         field=column,
                         issue_type="invalid_format",
                         original_value=str(raw_value),
@@ -407,8 +411,8 @@ class CSVCleaner:
         return result, issues
 
     def convert_data_types(
-        self, df: pd.DataFrame, type_mapping: Dict[str, str]
-    ) -> Tuple[pd.DataFrame, List[DataQualityIssue]]:
+        self, df: pd.DataFrame, type_mapping: dict[str, str]
+    ) -> tuple[pd.DataFrame, list[DataQualityIssue]]:
         """Convert columns to specified pandas/Python types.
 
         Args:
@@ -427,7 +431,7 @@ class CSVCleaner:
                 type isn't supported.
         """
         result = df.copy()
-        issues: List[DataQualityIssue] = []
+        issues: list[DataQualityIssue] = []
 
         for column, target_type in type_mapping.items():
             if column not in df.columns:
@@ -446,7 +450,11 @@ class CSVCleaner:
             for idx in original.index[(~was_null) & failed]:
                 issues.append(
                     DataQualityIssue(
-                        row_index=int(idx),
+                        # df/series here are always freshly loaded via
+                        # load_csv (a plain RangeIndex), so idx is an int
+                        # at runtime even though pandas-stubs types it as
+                        # Hashable.
+                        row_index=cast(int, idx),
                         field=column,
                         issue_type="conversion_failed",
                         original_value=str(original.at[idx]),
@@ -463,8 +471,8 @@ class CSVCleaner:
         return result, issues
 
     def _convert_column(
-        self, series: "pd.Series", target_type: str
-    ) -> Tuple["pd.Series", "pd.Series"]:
+        self, series: pd.Series, target_type: str
+    ) -> tuple[pd.Series, pd.Series]:
         """Convert one column; returns (converted_series, failure_mask)."""
         if target_type in ("int", "float"):
             numeric = pd.to_numeric(series, errors="coerce")
@@ -494,7 +502,7 @@ class CSVCleaner:
             converted = pd.to_datetime(series, errors="coerce", format="mixed")
             failed = series.notna() & converted.isna()
             if target_type == "date":
-                converted = converted.dt.date
+                return converted.dt.date, failed
             return converted, failed
 
         # str
@@ -515,8 +523,8 @@ class CSVCleaner:
         Returns:
             A new DataFrame with standardized column names.
         """
-        seen: Dict[str, int] = {}
-        new_names: Dict[Any, str] = {}
+        seen: dict[str, int] = {}
+        new_names: dict[Any, str] = {}
         for original in df.columns:
             normalized = re.sub(r"[^a-z0-9]+", "_", str(original).strip().lower()).strip("_")
             normalized = normalized or "column"
@@ -532,7 +540,7 @@ class CSVCleaner:
     # -- Pipeline orchestration -----------------------------------------
 
     def clean(
-        self, df: pd.DataFrame, rules: List[CleaningRule], remove_empty_rows: bool = True
+        self, df: pd.DataFrame, rules: list[CleaningRule], remove_empty_rows: bool = True
     ) -> CleaningResult:
         """Apply a series of cleaning rules and produce a full audit trail.
 
@@ -565,7 +573,7 @@ class CSVCleaner:
         quality_score_before = self._analyzer.generate_quality_score(original)
 
         working = df.copy()
-        removed_rows: List[int] = []
+        removed_rows: list[int] = []
         if remove_empty_rows:
             before_count = len(working)
             working = working.dropna(how="all")
@@ -575,8 +583,8 @@ class CSVCleaner:
                 )
                 logger.info("Removed %d fully-empty row(s)", before_count - len(working))
 
-        all_issues: List[DataQualityIssue] = []
-        columns_processed: Dict[str, Dict[str, Any]] = {}
+        all_issues: list[DataQualityIssue] = []
+        columns_processed: dict[str, dict[str, Any]] = {}
 
         for rule in rules:
             working, issues, rule_removed = self._apply_rule(working, rule, columns_processed)
@@ -618,8 +626,8 @@ class CSVCleaner:
         )
 
     def _apply_rule(
-        self, df: pd.DataFrame, rule: CleaningRule, columns_processed: Dict[str, Dict[str, Any]]
-    ) -> Tuple[pd.DataFrame, List[DataQualityIssue], List[int]]:
+        self, df: pd.DataFrame, rule: CleaningRule, columns_processed: dict[str, dict[str, Any]]
+    ) -> tuple[pd.DataFrame, list[DataQualityIssue], list[int]]:
         """Dispatch one CleaningRule to the matching CSVCleaner method.
 
         Supported ``rule_type`` values and their ``parameters``:
@@ -638,8 +646,8 @@ class CSVCleaner:
         * ``"standardize_column_names"`` -- no parameters.
         """
         params = rule.parameters or {}
-        issues: List[DataQualityIssue] = []
-        removed: List[int] = []
+        issues: list[DataQualityIssue] = []
+        removed: list[int] = []
         columns = params.get("columns", [rule.field] if rule.field else None)
 
         if rule.rule_type == "trim":
@@ -685,10 +693,10 @@ class CSVCleaner:
         return df, issues, removed
 
     def _generate_suggestions(
-        self, df: pd.DataFrame, issues: List[DataQualityIssue], quality_score_after: float
-    ) -> List[str]:
+        self, df: pd.DataFrame, issues: list[DataQualityIssue], quality_score_after: float
+    ) -> list[str]:
         """Build human-readable recommendations from the final state."""
-        suggestions: List[str] = []
+        suggestions: list[str] = []
 
         for column, rate in self._analyzer.detect_missing_values(df).items():
             if rate > 0.1:
@@ -697,7 +705,7 @@ class CSVCleaner:
                     "consider a fill strategy or manual review."
                 )
 
-        error_counts: Dict[str, int] = {}
+        error_counts: dict[str, int] = {}
         for issue in issues:
             if issue.severity == "error":
                 error_counts[issue.field] = error_counts.get(issue.field, 0) + 1
@@ -721,7 +729,7 @@ class CSVCleaner:
         result: CleaningResult,
         output_csv: str,
         report_json: str,
-        removed_rows_csv: Optional[str] = None,
+        removed_rows_csv: str | None = None,
     ) -> None:
         """Write the cleaned CSV, JSON quality report, and (optionally) removed rows.
 

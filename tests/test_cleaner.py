@@ -111,7 +111,7 @@ class TestStandardizeCase:
 
     def test_invalid_case_raises_cleaning_error(self, cleaner):
         df = pd.DataFrame({"a": ["x"]})
-        with pytest.raises(CleaningError, match="lower.*upper.*title"):
+        with pytest.raises(CleaningError, match=r"lower.*upper.*title"):
             cleaner.standardize_case(df, case="sideways")
 
 
@@ -173,7 +173,7 @@ class TestRemoveDuplicates:
 
     def test_keep_last_removes_earlier_occurrences(self, cleaner):
         df = pd.DataFrame({"a": ["1", "1", "2"]})
-        result, removed = cleaner.remove_duplicates(df, keep="last")
+        _result, removed = cleaner.remove_duplicates(df, keep="last")
         assert removed == [0]
 
     def test_keep_false_removes_every_duplicate_occurrence(self, cleaner):
@@ -184,7 +184,7 @@ class TestRemoveDuplicates:
 
     def test_subset_restricts_comparison_columns(self, cleaner):
         df = pd.DataFrame({"a": ["1", "1"], "b": ["x", "y"]})
-        result, removed = cleaner.remove_duplicates(df, subset=["a"])
+        result, _removed = cleaner.remove_duplicates(df, subset=["a"])
         assert len(result) == 1
 
     def test_no_duplicates_removes_nothing(self, cleaner):
@@ -228,17 +228,17 @@ class TestValidateColumn:
 
     def test_invalid_numeric_is_flagged(self, cleaner):
         df = pd.DataFrame({"age": ["not-a-number"]})
-        result, issues = cleaner.validate_column(df, "age", "numeric")
+        _result, issues = cleaner.validate_column(df, "age", "numeric")
         assert len(issues) == 1
 
     def test_missing_values_are_skipped_not_flagged(self, cleaner):
         df = pd.DataFrame({"email": [None]})
-        result, issues = cleaner.validate_column(df, "email", "email")
+        _result, issues = cleaner.validate_column(df, "email", "email")
         assert issues == []
 
     def test_date_column_is_normalized_to_iso(self, cleaner):
         df = pd.DataFrame({"created": ["01/15/2023"]})
-        result, issues = cleaner.validate_column(df, "created", "date")
+        result, _issues = cleaner.validate_column(df, "created", "date")
         assert result["created"].tolist() == ["2023-01-15"]
 
     def test_unknown_column_raises_cleaning_error(self, cleaner):
@@ -268,7 +268,7 @@ class TestConvertDataTypes:
 
     def test_int_conversion_flags_non_whole_numbers(self, cleaner):
         df = pd.DataFrame({"age": ["28", "35.5"]})
-        result, issues = cleaner.convert_data_types(df, {"age": "int"})
+        _result, issues = cleaner.convert_data_types(df, {"age": "int"})
         assert len(issues) == 1
         assert issues[0].original_value == "35.5"
 
@@ -303,7 +303,7 @@ class TestConvertDataTypes:
 
     def test_str_conversion_always_succeeds(self, cleaner):
         df = pd.DataFrame({"a": ["1", "2"]})
-        result, issues = cleaner.convert_data_types(df, {"a": "str"})
+        _result, issues = cleaner.convert_data_types(df, {"a": "str"})
         assert issues == []
 
     def test_missing_values_are_not_flagged_as_failures(self, cleaner):

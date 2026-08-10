@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Protocol
 from urllib.parse import urlparse, urlunparse
 
 from .logger import get_logger
@@ -20,6 +20,27 @@ from .logger import get_logger
 logger = get_logger("validators")
 
 __all__ = ["FieldValidator"]
+
+
+class _ValidationResultLike(Protocol):
+    """Structural shape of ``email_phone_validator.ValidationResult``.
+
+    Defined locally (rather than importing the concrete class) so this
+    module only depends on the two methods it actually calls -- and so
+    typing doesn't require the injected object to *be* an
+    ``email-phone-validator`` instance, just to quack like one.
+    """
+
+    is_valid: bool
+    formatted: str | None
+
+
+class _EmailValidatorLike(Protocol):
+    def validate(self, value: str) -> _ValidationResultLike: ...
+
+
+class _PhoneValidatorLike(Protocol):
+    def validate(self, value: str, country: str = ...) -> _ValidationResultLike: ...
 
 _BOOL_MAP = {
     "true": True,
@@ -41,7 +62,7 @@ _BOOL_MAP = {
 # lossy without locale context -- month-first (US) is tried before
 # day-first, so "01/02/2023" reads as January 2nd, not February 1st.
 # See the README's Limitations section.
-_DATE_FORMATS: Tuple[str, ...] = (
+_DATE_FORMATS: tuple[str, ...] = (
     "%Y-%m-%d",
     "%Y/%m/%d",
     "%m/%d/%Y",
@@ -80,11 +101,15 @@ class FieldValidator:
         (True, True)
     """
 
-    def __init__(self, email_validator=None, phone_validator=None) -> None:
+    def __init__(
+        self,
+        email_validator: _EmailValidatorLike | None = None,
+        phone_validator: _PhoneValidatorLike | None = None,
+    ) -> None:
         self.email_validator = email_validator
         self.phone_validator = phone_validator
 
-    def validate_numeric(self, value: object) -> Tuple[bool, Optional[float]]:
+    def validate_numeric(self, value: object) -> tuple[bool, float | None]:
         """Check whether a value converts cleanly to a number.
 
         Args:
@@ -106,7 +131,7 @@ class FieldValidator:
         except ValueError:
             return False, None
 
-    def validate_boolean(self, value: object) -> Tuple[bool, Optional[bool]]:
+    def validate_boolean(self, value: object) -> tuple[bool, bool | None]:
         """Check whether a value is a recognizable boolean.
 
         Accepts (case-insensitively): ``true``/``false``, ``yes``/``no``,
@@ -127,8 +152,8 @@ class FieldValidator:
         return False, None
 
     def validate_date(
-        self, value: object, format: Optional[str] = None  # noqa: A002 - matches spec's param name
-    ) -> Tuple[bool, Optional[str]]:
+        self, value: object, format: str | None = None
+    ) -> tuple[bool, str | None]:
         """Check whether a value is a recognizable date, and normalize it.
 
         Args:
@@ -156,7 +181,7 @@ class FieldValidator:
             return True, parsed.strftime("%Y-%m-%d")
         return False, None
 
-    def validate_url(self, value: object) -> Tuple[bool, Optional[str]]:
+    def validate_url(self, value: object) -> tuple[bool, str | None]:
         """Check whether a value is a well-formed, absolute URL.
 
         Requires an explicit ``http``, ``https``, or ``ftp`` scheme and a
@@ -193,7 +218,7 @@ class FieldValidator:
         )
         return True, normalized
 
-    def validate_email(self, value: object) -> Tuple[bool, Optional[str]]:
+    def validate_email(self, value: object) -> tuple[bool, str | None]:
         """Check whether a value is a valid email address.
 
         Args:
@@ -221,7 +246,7 @@ class FieldValidator:
             return True, candidate.lower()
         return False, None
 
-    def validate_phone(self, value: object, country: str = "US") -> Tuple[bool, Optional[str]]:
+    def validate_phone(self, value: object, country: str = "US") -> tuple[bool, str | None]:
         """Check whether a value is a valid phone number.
 
         Args:
