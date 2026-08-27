@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from dataclasses import field as dc_field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import pandas as pd
@@ -188,7 +188,7 @@ class DataQualityReport:
         """
         report = result.report
         return cls(
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             total_rows=report.total_rows,
             processed_rows=report.processed_rows,
             rows_with_issues=report.rows_with_issues,
