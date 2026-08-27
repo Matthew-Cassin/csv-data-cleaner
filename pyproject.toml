@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "csv-data-cleaner"
-version = "1.0.0"
+version = "1.0.1"
 description = "Clean, validate, and standardize CSV data: encoding/delimiter detection, missing-value strategies, type coercion, and validated email/phone columns."
 readme = "README.md"
 license = "MIT"

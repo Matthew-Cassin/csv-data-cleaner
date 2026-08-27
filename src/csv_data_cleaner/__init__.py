@@ -42,7 +42,7 @@ from .models import (
 from .reporter import QualityReporter
 from .validators import FieldValidator
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 __all__ = [
     "CSVCleaner",
