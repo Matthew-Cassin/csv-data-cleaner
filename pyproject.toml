@@ -16,7 +16,7 @@ dependencies = [
     "chardet>=7.5.1,<8.0.0",
     "click>=8.4.2,<9.0.0",
     "tabulate>=0.10.0,<0.11.0",
-    "email-phone-validator @ git+https://github.com/Matthew-Cassin/email-phone-validator.git@v0.1.0",
+    "email-phone-validator @ git+https://github.com/Matthew-Cassin/email-phone-validator.git@v1.0.0",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -64,7 +64,7 @@ addopts = "--strict-markers"
 source = ["csv_data_cleaner"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
@@ -76,9 +76,3 @@ select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
 [tool.mypy]
 strict = true
 
-# fuzzywuzzy-free here, but email-phone-validator is still pinned to its
-# pre-1.0 tag (no py.typed yet) -- bump this override away once the pin
-# below is updated to >=v1.0.0.
-[[tool.mypy.overrides]]
-module = ["email_phone_validator.*"]
-ignore_missing_imports = true
